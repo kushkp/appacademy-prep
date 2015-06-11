@@ -1,0 +1,7 @@
+elephant
+guava
+dynamite
+cobalt
+apple
+flute
+banana
