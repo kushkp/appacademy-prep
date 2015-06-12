@@ -34,11 +34,15 @@ class Board
     "#{index} #{chars}"
   end
 
-  def populate_grid
-    until @grid.flatten.count(:ship) == 5
-      row = Random.new.rand(@size)
-      col = Random.new.rand(@size)
-      self[row, col] = :ship
+  def populate_grid(locations = nil)
+    if locations.nil?
+      until @grid.flatten.count(:ship) == 5
+        row = rand(@size)
+        col = rand(@size)
+        self[row, col] = :ship
+      end
+    else
+      locations.each { |row, col| self[row.to_i, col.to_i] = :ship }
     end
   end
 
@@ -74,7 +78,7 @@ class Board
         end
       end
     end
-    # p ship_locs_arr #for debugging
+    p ship_locs_arr #for debugging
   end
 end
 
@@ -82,12 +86,13 @@ class Game
   def initialize(board_size = 4)
       @player1 = HumanPlayer.new("PeeWee", 4)
       @player2 = ComputerPlayer.new("Naval Commander", 4)
+      @players = [@player1, @player2]
       @this_player = @player2
+      @other_player = @player1
   end
 
   def play
-    @player1.board.populate_grid
-    @player2.board.populate_grid
+    @players.each {|player| player.setup_board}
     welcome_message
     until game_over?
       change_turn
@@ -99,11 +104,10 @@ class Game
   def welcome_message
     puts "Welcome to BattleShip!"
     puts "Fire at location (x,y) by entering 'x,y'"
-    # display_board
   end
 
   def change_turn
-    @this_player = other_player
+    @this_player, @other_player = other_player, other_player
   end
 
   def other_player
@@ -114,8 +118,9 @@ class Game
     display_board
     puts "#{player.name}'s Turn:'"
     fire_at = player.get_input
-    until @this_player.board.in_range?(*fire_at) #until valid_move?
-      puts "Invalid location. Please enter location within (0-#{@this_player.board.size-1})x(0-#{@this_player.board.size-1})."
+    p fire_at
+    until valid_move?(*fire_at)
+      puts "Invalid location. Please enter location within (0-#{@other_player.board.size-1})x(0-#{@other_player.board.size-1})."
       fire_at = player.get_input
     end
     attack(fire_at)
@@ -123,8 +128,12 @@ class Game
     display_status
   end
 
-  def valid_move?
-
+  def valid_move?(row, col)
+    if @other_player.board.in_range?(row, col) && (@other_player.board[row, col] == :water || @other_player.board[row, col] == :ship)
+      true
+    else
+      false
+    end
   end
 
   def attack(pos)
@@ -182,6 +191,19 @@ class HumanPlayer
       false
     end
   end
+
+  def setup_board
+    puts "Where would you like to place your 5 ships?"
+    puts "Enter locations like '1 2, 2 3, 0 0, etc..."
+    locations = []
+    until locations.length == 5
+      input = gets.chomp.split(",")
+      input.map! { |string| string.strip}
+      locations = []
+      input.each { |string| locations << string.scan(/\d+/) }
+    end
+    @board.populate_grid(locations)
+  end
 end
 
 class ComputerPlayer
@@ -196,13 +218,17 @@ class ComputerPlayer
   end
 
   def get_input
-    random_pick = [Random.new.rand(@board_size), Random.new.rand(@board_size)]
+    random_pick = [rand(@board_size), rand(@board_size)]
     while @guesses.include?(random_pick)
-      random_pick = [Random.new.rand(@board_size), Random.new.rand(@board_size)]
+      random_pick = [(@board_size), rand(@board_size)]
     end
     puts "random pick: #{random_pick}"
     @guesses << random_pick
     random_pick
+  end
+
+  def setup_board
+    @board.populate_grid()
   end
 end
 
