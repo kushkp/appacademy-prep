@@ -7,6 +7,7 @@ class Hangman
 	def play
 		print_instructions
 		@checking_player.pick_secret_word
+		give_guesser_length
 		until game_over?
 			play_turn
 		end
@@ -15,8 +16,13 @@ class Hangman
 
 	private
 
+	def give_guesser_length
+		length = @checking_player.give_secret_length
+		@guessing_player.receive_secret_length(length)
+	end
+
 	def print_instructions
-		puts "You can miss 10 guesses before the executioner pushes you off your chair!"
+		puts "Guess the secret word! Only 10 wrong guesses allowed."
 	end
 
 	def play_turn
@@ -35,20 +41,22 @@ class Hangman
 
 	def print_end_message #should this belong to player classes?
 		# puts "The word was #{@checking_player.secret_word}." #then we can reference @secret_word variable from within the object
+		@checking_player.print_secret_word
 		if @checking_player.word_guessed?
-			puts "Congratulations! #{@guessing_player} WINS!"
+			puts "Congratulations! #{@guessing_player.name} WINS!"
 		else
-			puts "The Executioner is tired of your bad guessing. You are hung in front of a loud cheering audience!"
+			puts "#{@guessing_player.name} loses!"
 		end
 	end
 end
 
 class ComputerPlayer
-	attr_reader :dictionary, :secret_word, :misses
+	attr_reader :dictionary, :name, :secret_word, :misses
 
-	def initialize
-		load_dictionary
+	def initialize(name)
+		@name = name
 		@guessed_letters = []
+		load_dictionary
 	end
 
 	def pick_secret_word
@@ -57,10 +65,25 @@ class ComputerPlayer
 		init_check_vars
 	end
 
-	def receive_secret_length
+	def give_secret_length
+		@secret_word.length
+	end
+
+	def receive_secret_length(length)
+		@secret_word_length = length
 	end
 
 	def guess
+		update_dictionary
+		
+	end
+
+	def update_dictionary
+		@dictionary = @dictionary.select { |word| word.length == @secret_word_length }
+
+	end
+
+	def guess_random
 		random_letter = (97 + rand(26)).chr
 		while @guessed_letters.include?(random_letter)
 			random_letter = (97 + rand(26)).chr
@@ -79,7 +102,6 @@ class ComputerPlayer
 	end
 
 	def handle_guess_response(guess)
-		puts "guess in handle response: #{guess}"
 		@guessed_letters << guess
 		if @secret_word.include?(guess)
 			puts "#{guess} is correct!"
@@ -92,12 +114,16 @@ class ComputerPlayer
 	end
 
 	def display_status
-		puts "Word Length: #{@discovered_word.length}"
+		puts "Word Length: #{@secret_word.length}"
 		p @discovered_word.join("")
 	end
 
 	def word_guessed?
 		@secret_word == @discovered_word.join
+	end
+
+	def print_secret_word
+		puts "Secret word was #{@secret_word}."
 	end
 
 	private
@@ -122,21 +148,25 @@ class ComputerPlayer
 end
 
 class HumanPlayer
-	attr_reader :misses
+	attr_reader :name, :misses
 
-	def initialize
+	def initialize(name)
+		@name = name
 	end
 
 	def pick_secret_word
 		puts "Think of a word for the computer to guess."
-		receive_secret_length
+		puts "How long is your word?"
+		@word_length = gets.chomp.to_i
 		init_check_vars
 		@misses = 0
 	end
 
-	def receive_secret_length
-		puts "How long is your word?"
-		@word_length = gets.chomp.to_i
+	def give_secret_length
+		@word_length
+	end
+
+	def receive_secret_length(length)
 	end
 
 	def guess
@@ -170,16 +200,20 @@ class HumanPlayer
 		p @discovered_word.join("")
 	end
 
+	def print_secret_word
+	end
+
 	private
 
 	def init_check_vars
-		@discovered_word = Array.new(@word_length) { "_"}
+		@discovered_word = Array.new(@word_length) { "_" }
 	end
 
 end
 
 
-siri = ComputerPlayer.new
-kush = HumanPlayer.new
+siri = ComputerPlayer.new("Siri")
+alpha = ComputerPlayer.new("Alpha")
+kush = HumanPlayer.new("Kush")
 test_game = Hangman.new(siri,kush)
 test_game.play
