@@ -82,6 +82,17 @@ class Board
   end
 end
 
+class Ship
+  attr_reader :name
+    LENGTHS = { :carrier => 5, :battleship => 4, :submarine => 3, :destroyer => 3, :patrol => 2}
+
+  def initialize(name)
+    @name = name
+    @length = LENGTHS(name.to_sym)
+  end
+
+end
+
 class Game
   def initialize(board_size = 4)
       @player1 = HumanPlayer.new("PeeWee", 4)
@@ -215,6 +226,15 @@ class ComputerPlayer
     @board_size = board_size
     @name = name
     @guesses = Set.new
+    create_fleet
+  end
+
+  def create_fleet
+    @carrier = Ship.new("carrier")
+    @battleship = Ship.new("battleship")
+    @submarine = Ship.new("submarine")
+    @destroyer = Ship.new("destroyer")
+    @patrol = Ship.new("patrol")
   end
 
   def get_input
