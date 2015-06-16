@@ -1,3 +1,5 @@
+#ready for review
+
 class Hangman
 	def initialize(guessing_player, checking_player)
 		@guessing_player = guessing_player
@@ -32,7 +34,8 @@ class Hangman
 			until @checking_player.valid_guess?(guess)
 				guess = @guessing_player.guess
 			end
-			@checking_player.handle_guess_response(guess)
+			indices = @checking_player.handle_guess_response(guess)
+			@guessing_player.accept_response(indices, guess)
 	end
 
 	def game_over? #should this belong to player classes?
@@ -71,25 +74,33 @@ class ComputerPlayer
 
 	def receive_secret_length(length)
 		@secret_word_length = length
+		@dictionary = @dictionary.select { |word| word.length == @secret_word_length }
+		@discovered_word = Array.new(@secret_word_length) { "_" }
 	end
 
 	def guess
-		update_dictionary
-		
-	end
-
-	def update_dictionary
-		@dictionary = @dictionary.select { |word| word.length == @secret_word_length }
-
-	end
-
-	def guess_random
-		random_letter = (97 + rand(26)).chr
-		while @guessed_letters.include?(random_letter)
-			random_letter = (97 + rand(26)).chr
+		@letter_frequency = Hash.new(0)
+		@dictionary.each do |word|
+			word.split("").each { |letter| @letter_frequency[letter] += 1 }
 		end
-		@guessed_letters << random_letter
-		random_letter
+		@guessed_letters.each { |letter| @letter_frequency.delete(letter) }
+		p @guessed_letters
+		p @letter_frequency
+		p @dictionary
+
+		choice = @letter_frequency.sort_by { |key, value| value }.reverse.first
+		@guessed_letters << choice[0]
+		@letter_frequency.delete(choice[0])
+		p choice[0]
+	end
+
+	def accept_response(indices, letter)
+		p letter
+		p indices
+		indices.each do |index|
+			@discovered_word[index] = letter
+			@dictionary = @dictionary.select { |word| word[index] == letter }
+		end
 	end
 
 	def valid_guess?(guess)
@@ -110,6 +121,7 @@ class ComputerPlayer
 		else
 			puts "#{guess} is not in my word!"
 			@misses += 1
+			return []
 		end
 	end
 
@@ -148,7 +160,7 @@ class ComputerPlayer
 end
 
 class HumanPlayer
-	attr_reader :name, :misses
+	attr_reader :name, :misses, :discovered_word
 
 	def initialize(name)
 		@name = name
@@ -185,11 +197,15 @@ class HumanPlayer
 		locations = gets.chomp
 		if locations == "n"
 			@misses += 1
+			return []
 		else
 			indices = locations.split(",")
 			indices.map! { |el| el.to_i - 1 }
 			indices.each { |index| @discovered_word[index] = guess }
 		end
+	end
+
+	def accept_response(indices, letter)
 	end
 
 	def word_guessed?
@@ -215,5 +231,5 @@ end
 siri = ComputerPlayer.new("Siri")
 alpha = ComputerPlayer.new("Alpha")
 kush = HumanPlayer.new("Kush")
-test_game = Hangman.new(siri,kush)
+test_game = Hangman.new(siri,alpha)
 test_game.play
